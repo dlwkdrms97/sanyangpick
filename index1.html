@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎡 우리반 랜덤 뽑기</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&family=Jua&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#0a0a1a;--gold:#FFD700;--gold2:#FFA500;
+  --accent:#FF6B6B;--green:#00E676;--text:#fff;
+  --muted:rgba(255,255,255,0.5);--card:rgba(255,255,255,0.05);--border:rgba(255,255,255,0.1);
+}
+body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);min-height:100vh;color:var(--text);overflow-x:hidden;}
+
+/* 별 */
+.stars{position:fixed;inset:0;pointer-events:none;z-index:0;}
+.star{position:absolute;border-radius:50%;background:#fff;animation:twinkle var(--d) ease-in-out infinite alternate;}
+@keyframes twinkle{0%{opacity:0.08;}100%{opacity:0.75;}}
+
+.app{position:relative;z-index:1;max-width:960px;margin:0 auto;padding:1.25rem 1rem 4rem;}
+
+/* 헤더 */
+.header{text-align:center;padding:0.75rem 0 0.6rem;}
+.header h1{font-family:'Jua',sans-serif;font-size:2rem;background:linear-gradient(135deg,var(--gold),var(--gold2),var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.header p{font-size:0.82rem;color:var(--muted);margin-top:0.15rem;}
+
+/* 레이아웃 */
+.layout{display:grid;grid-template-columns:1fr 420px;gap:1.25rem;align-items:start;}
+@media(max-width:720px){.layout{grid-template-columns:1fr;}}
+
+/* 왼쪽 패널 */
+.panel{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:1.25rem;}
+.panel-title{font-family:'Jua',sans-serif;font-size:0.95rem;color:var(--gold);margin-bottom:0.9rem;display:flex;align-items:center;gap:6px;}
+.input-row{display:flex;gap:8px;margin-bottom:0.7rem;}
+.name-input{flex:1;background:rgba(255,255,255,0.07);border:1.5px solid var(--border);border-radius:12px;padding:9px 13px;font-size:0.9rem;font-family:'Noto Sans KR',sans-serif;color:#fff;outline:none;transition:border-color 0.2s;}
+.name-input:focus{border-color:var(--gold);}
+.name-input::placeholder{color:var(--muted);}
+.add-btn{background:var(--gold);color:#1a1200;border:none;border-radius:12px;padding:9px 16px;font-size:1.1rem;font-weight:900;cursor:pointer;font-family:'Jua',sans-serif;transition:all 0.15s;}
+.add-btn:hover{background:var(--gold2);transform:scale(1.06);}
+.bulk-input{width:100%;background:rgba(255,255,255,0.05);border:1.5px dashed var(--border);border-radius:12px;padding:9px 13px;font-size:0.82rem;font-family:'Noto Sans KR',sans-serif;color:#fff;outline:none;resize:vertical;min-height:58px;margin-bottom:0.55rem;transition:border-color 0.2s;}
+.bulk-input:focus{border-color:var(--gold);}
+.bulk-input::placeholder{color:var(--muted);}
+.bulk-btn{width:100%;background:rgba(255,215,0,0.1);border:1.5px solid rgba(255,215,0,0.35);color:var(--gold);border-radius:12px;padding:7px;font-size:0.82rem;font-family:'Jua',sans-serif;cursor:pointer;transition:all 0.15s;margin-bottom:0.85rem;}
+.bulk-btn:hover{background:rgba(255,215,0,0.2);}
+.name-list{display:flex;flex-wrap:wrap;gap:6px;max-height:190px;overflow-y:auto;padding-right:2px;}
+.name-list::-webkit-scrollbar{width:3px;}
+.name-list::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+.name-tag{display:inline-flex;align-items:center;gap:4px;background:rgba(255,255,255,0.09);border:1px solid var(--border);border-radius:30px;padding:4px 10px 4px 9px;font-size:0.8rem;transition:all 0.25s;}
+.name-tag.used{opacity:0.22;text-decoration:line-through;}
+.del-btn{background:none;border:none;color:var(--muted);cursor:pointer;font-size:0.85rem;padding:0;line-height:1;transition:color 0.15s;}
+.del-btn:hover{color:var(--accent);}
+.action-row{display:flex;gap:7px;margin-top:0.85rem;}
+.act-btn{flex:1;padding:8px 5px;border-radius:11px;font-family:'Jua',sans-serif;font-size:0.8rem;cursor:pointer;border:1.5px solid;transition:all 0.18s;}
+.shuffle-btn{background:rgba(0,230,118,0.08);border-color:var(--green);color:var(--green);}
+.shuffle-btn:hover{background:rgba(0,230,118,0.18);}
+.reset-btn{background:rgba(255,107,107,0.08);border-color:var(--accent);color:var(--accent);}
+.reset-btn:hover{background:rgba(255,107,107,0.18);}
+.clear-btn{background:rgba(255,255,255,0.04);border-color:var(--border);color:var(--muted);}
+.clear-btn:hover{background:rgba(255,255,255,0.1);}
+.count-bar{font-size:0.75rem;color:var(--muted);margin-top:0.65rem;text-align:center;}
+.count-bar span{color:var(--gold);font-weight:700;}
+
+/* 오른쪽: 돌림판 */
+.wheel-panel{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:1.25rem;text-align:center;}
+
+/* 포인터 + 캔버스 감싸는 컨테이너 */
+.wheel-scene{position:relative;width:340px;height:360px;margin:0 auto 0.9rem;}
+
+/* 위쪽 당첨 바늘 */
+.pointer-wrap{position:absolute;top:0;left:50%;transform:translateX(-50%);z-index:15;display:flex;flex-direction:column;align-items:center;gap:0;}
+.pointer-label{font-family:'Jua',sans-serif;font-size:0.72rem;color:var(--gold);letter-spacing:1px;margin-bottom:1px;}
+.pointer-triangle{width:0;height:0;border-left:14px solid transparent;border-right:14px solid transparent;border-top:32px solid var(--gold);filter:drop-shadow(0 0 10px rgba(255,215,0,1));}
+
+/* 돌림판 캔버스 — 포인터 아래에 배치 */
+.wheel-canvas-wrap{position:absolute;bottom:0;left:50%;transform:translateX(-50%);}
+.wheel-glow{position:absolute;inset:-12px;border-radius:50%;background:radial-gradient(circle,rgba(255,215,0,0.08),transparent 68%);pointer-events:none;}
+canvas{border-radius:50%;display:block;}
+.wheel-center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:32px;height:32px;border-radius:50%;background:#12122a;border:3px solid var(--gold);z-index:10;box-shadow:0 0 16px rgba(255,215,0,0.7);}
+
+/* 상태 텍스트 */
+.spin-status{font-size:0.82rem;margin-bottom:0.7rem;min-height:1.1rem;transition:color 0.3s;}
+.status-idle{color:var(--muted);}
+.status-spin{color:var(--green);}
+.status-stopping{color:var(--gold2);}
+.status-done{color:var(--gold);}
+
+/* 메인 버튼 */
+.main-btn{
+  width:100%;padding:16px;border:none;border-radius:16px;
+  font-family:'Jua',sans-serif;font-size:1.25rem;
+  cursor:pointer;transition:all 0.2s;margin-bottom:0.7rem;
+  position:relative;overflow:hidden;
+}
+.main-btn::after{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,0.13),transparent);pointer-events:none;}
+.btn-start{background:linear-gradient(135deg,#1DB954,#0f9c40);color:#fff;box-shadow:0 4px 20px rgba(29,185,84,0.4);}
+.btn-start:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 8px 28px rgba(29,185,84,0.55);}
+.btn-stop{background:linear-gradient(135deg,#FF6B6B,#cc2200);color:#fff;box-shadow:0 4px 20px rgba(255,107,107,0.45);}
+.btn-stop:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 8px 28px rgba(255,107,107,0.6);}
+.main-btn:disabled{background:#2a2a3a;color:#555;box-shadow:none;cursor:not-allowed;transform:none;}
+.main-btn:disabled::after{display:none;}
+
+/* 속도 슬라이더 */
+.speed-row{display:flex;align-items:center;gap:10px;}
+.speed-row label{font-size:0.75rem;color:var(--muted);white-space:nowrap;}
+input[type=range]{flex:1;accent-color:var(--gold);}
+.speed-val{font-size:0.75rem;color:var(--gold);min-width:20px;text-align:right;}
+
+/* 당첨 모달 */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.9);display:flex;align-items:center;justify-content:center;z-index:1000;opacity:0;pointer-events:none;transition:opacity 0.3s;}
+.modal-bg.show{opacity:1;pointer-events:all;}
+.modal-box{
+  background:linear-gradient(160deg,#1a1540,#0a0a1a);
+  border:2px solid var(--gold);border-radius:28px;
+  padding:2.5rem 2rem 2rem;text-align:center;
+  max-width:400px;width:90%;
+  transform:scale(0.75) translateY(30px);
+  transition:transform 0.4s cubic-bezier(.34,1.56,.64,1);
+  position:relative;overflow:hidden;
+}
+.modal-bg.show .modal-box{transform:scale(1) translateY(0);}
+.modal-box::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 50% 0%,rgba(255,215,0,0.1),transparent 55%);pointer-events:none;}
+.winner-emoji{font-size:3.5rem;display:block;margin-bottom:0.4rem;animation:wpulse 0.5s ease infinite alternate;}
+@keyframes wpulse{from{transform:scale(1);}to{transform:scale(1.12);}}
+.winner-name{font-family:'Jua',sans-serif;font-size:2.8rem;background:linear-gradient(135deg,var(--gold),var(--gold2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:0.4rem;line-height:1.2;}
+.winner-sub{font-size:0.9rem;color:var(--muted);margin-bottom:1.75rem;}
+.modal-btns{display:flex;gap:9px;}
+.next-btn{flex:1;padding:13px;background:linear-gradient(135deg,var(--gold),var(--gold2));color:#1a1200;border:none;border-radius:13px;font-family:'Jua',sans-serif;font-size:0.95rem;cursor:pointer;transition:all 0.15s;}
+.next-btn:hover{transform:translateY(-2px);}
+.close-btn{flex:1;padding:13px;background:rgba(255,255,255,0.07);border:1.5px solid var(--border);color:#fff;border-radius:13px;font-family:'Jua',sans-serif;font-size:0.95rem;cursor:pointer;transition:all 0.15s;}
+.close-btn:hover{background:rgba(255,255,255,0.14);}
+
+/* 파티클 */
+@keyframes conffall{0%{transform:translateY(-10px) rotate(0deg);opacity:1;}100%{transform:translateY(108vh) rotate(720deg);opacity:0;}}
+.conf{position:fixed;top:0;pointer-events:none;z-index:9999;animation:conffall var(--cd) ease-in var(--cd2) forwards;}
+
+/* 당첨 칸 하이라이트 */
+@keyframes highlightPulse{0%,100%{opacity:0.55;}50%{opacity:1;}}
+</style>
+</head>
+<body>
+
+<div class="stars" id="stars"></div>
+
+<div class="app">
+  <div class="header">
+    <h1>🎡 우리반 랜덤 뽑기</h1>
+    <p>돌림판을 돌리고 멈춤 버튼을 눌러 당첨자를 뽑아요!</p>
+  </div>
+
+  <div class="layout">
+    <!-- 왼쪽: 이름 입력 -->
+    <div>
+      <div class="panel">
+        <div class="panel-title">👥 학생 이름 입력</div>
+        <div class="input-row">
+          <input class="name-input" id="nameIn" placeholder="이름 입력 후 Enter" maxlength="10"/>
+          <button class="add-btn" onclick="addName()">+</button>
+        </div>
+        <textarea class="bulk-input" id="bulkIn" placeholder="여러 명 한번에: 홍길동, 김철수, 이영희&#10;(쉼표 또는 줄바꿈으로 구분)"></textarea>
+        <button class="bulk-btn" onclick="bulkAdd()">📋 한번에 추가하기</button>
+        <div class="name-list" id="nameList"></div>
+        <div class="action-row">
+          <button class="act-btn shuffle-btn" onclick="shuffleNames()">🔀 섞기</button>
+          <button class="act-btn reset-btn" onclick="resetUsed()">🔄 다시 뽑기</button>
+          <button class="act-btn clear-btn" onclick="clearAll()">🗑️ 전체삭제</button>
+        </div>
+        <div class="count-bar" id="countBar">학생을 추가해 주세요</div>
+      </div>
+    </div>
+
+    <!-- 오른쪽: 돌림판 -->
+    <div class="wheel-panel">
+      <div class="panel-title" style="justify-content:center;">🎡 돌림판</div>
+
+      <div class="wheel-scene" id="wheelScene">
+        <!-- 당첨 바늘 (상단 고정) -->
+        <div class="pointer-wrap">
+          <div class="pointer-label">▼ 당첨</div>
+          <div class="pointer-triangle"></div>
+        </div>
+        <!-- 돌림판 -->
+        <div class="wheel-canvas-wrap">
+          <div style="position:relative;">
+            <div class="wheel-glow"></div>
+            <canvas id="wheel" width="320" height="320"></canvas>
+            <div class="wheel-center"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="spin-status status-idle" id="spinStatus">이름을 추가하고 돌림판을 시작하세요!</div>
+
+      <!-- 돌리기 / 멈추기 버튼 (하나만 표시) -->
+      <button class="main-btn btn-start" id="mainBtn" onclick="handleBtn()" disabled>
+        🎡 돌림판 시작!
+      </button>
+
+      <div class="speed-row">
+        <label>🐢</label>
+        <input type="range" id="speedRange" min="1" max="8" value="4" step="1" oninput="updateSpeed()"/>
+        <label>🐇</label>
+        <span class="speed-val" id="speedVal">4</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 당첨 모달 -->
+<div class="modal-bg" id="modalBg">
+  <div class="modal-box">
+    <span class="winner-emoji">🏆</span>
+    <div class="winner-name" id="winnerName"></div>
+    <div class="winner-sub" id="winnerSub"></div>
+    <div class="modal-btns">
+      <button class="next-btn" onclick="nextPick()">➡️ 다음 뽑기</button>
+      <button class="close-btn" onclick="closeModal()">✅ 확인</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── 별 배경 ──────────────────────────────────────────
+for(let i=0;i<75;i++){
+  const s=document.createElement('div');s.className='star';
+  const sz=Math.random()*2.2+0.4;
+  s.style.cssText=`width:${sz}px;height:${sz}px;left:${Math.random()*100}%;top:${Math.random()*100}%;--d:${(Math.random()*3+1).toFixed(1)}s;animation-delay:${(Math.random()*3).toFixed(1)}s;`;
+  document.getElementById('stars').appendChild(s);
+}
+
+// ── 상태 ─────────────────────────────────────────────
+let names=[], usedIdx=new Set();
+let angle=0;           // 현재 각도 (라디안)
+let angVel=0;          // 현재 각속도
+let targetVel=0;       // 목표 각속도 (스핀 중엔 최고속, 감속 중엔 0)
+let rafId=null;
+let state='idle';      // idle | spinning | stopping | done
+let speedMult=4;
+let lastTickSeg=-1;
+
+// ── 오디오 ───────────────────────────────────────────
+let AC;
+try{AC=new(window.AudioContext||window.webkitAudioContext)();}catch(e){}
+function resume(){if(AC&&AC.state==='suspended')AC.resume();}
+
+function maybePlayTick(seg){
+  if(seg===lastTickSeg||!AC)return;
+  lastTickSeg=seg;
+  const o=AC.createOscillator(),g=AC.createGain();
+  o.connect(g);g.connect(AC.destination);
+  o.type='triangle';
+  // 속도에 따라 피치 변화
+  o.frequency.value=400+Math.min(angVel*300,500);
+  g.gain.setValueAtTime(0.07,AC.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001,AC.currentTime+0.05);
+  o.start();o.stop(AC.currentTime+0.05);
+}
+
+function playStop(){
+  if(!AC)return;
+  // 감속할 때 드럼롤 느낌
+  const o=AC.createOscillator(),g=AC.createGain();
+  o.connect(g);g.connect(AC.destination);
+  o.type='sawtooth';
+  o.frequency.setValueAtTime(200,AC.currentTime);
+  o.frequency.exponentialRampToValueAtTime(60,AC.currentTime+0.4);
+  g.gain.setValueAtTime(0.12,AC.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001,AC.currentTime+0.4);
+  o.start();o.stop(AC.currentTime+0.4);
+}
+
+function playWin(){
+  if(!AC)return;
+  [523,659,784,1047,1319].forEach((f,i)=>{
+    const o=AC.createOscillator(),g=AC.createGain();
+    o.connect(g);g.connect(AC.destination);
+    const t=AC.currentTime+i*0.11;
+    o.type='sine';o.frequency.value=f;
+    g.gain.setValueAtTime(0.15,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.3);
+    o.start(t);o.stop(t+0.3);
+  });
+}
+
+function playShuffle(){
+  if(!AC)return;
+  for(let i=0;i<8;i++){
+    const o=AC.createOscillator(),g=AC.createGain();
+    o.connect(g);g.connect(AC.destination);
+    const t=AC.currentTime+i*0.055;
+    o.type='sine';o.frequency.value=200+Math.random()*700;
+    g.gain.setValueAtTime(0.06,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.07);
+    o.start(t);o.stop(t+0.07);
+  }
+}
+
+// ── 캔버스 ───────────────────────────────────────────
+const canvas=document.getElementById('wheel');
+const ctx=canvas.getContext('2d');
+const W=320, CX=160, CY=160, R=152;
+const COLORS=['#C62828','#F9A825','#2E7D32','#1565C0','#6A1B9A','#E65100','#00695C','#827717','#AD1457','#004D40','#4527A0','#4E342E'];
+
+function getWinner(){
+  const avail=names.map((n,i)=>({n,i})).filter(({i})=>!usedIdx.has(i));
+  if(avail.length===0)return null;
+  const slice=Math.PI*2/avail.length;
+  // 바늘은 위쪽(-π/2). 현재 angle 기준으로 어느 칸이 바늘에 걸렸는지
+  const norm=((-(angle)%(Math.PI*2))+Math.PI*2)%(Math.PI*2);
+  const idx=Math.floor(norm/slice)%avail.length;
+  return avail[idx];
+}
+
+function drawWheel(highlightIdx){
+  ctx.clearRect(0,0,W,W);
+  const avail=names.filter((_,i)=>!usedIdx.has(i));
+  if(avail.length===0){
+    ctx.save();
+    ctx.beginPath();ctx.arc(CX,CY,R,0,Math.PI*2);
+    ctx.fillStyle='rgba(255,255,255,0.06)';ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,0.28)';
+    ctx.font='bold 13px Noto Sans KR';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText('이름을 추가해 주세요',CX,CY);
+    ctx.restore();
+    return;
+  }
+  const n=avail.length;
+  const slice=Math.PI*2/n;
+
+  avail.forEach((name,i)=>{
+    const start=angle+i*slice-Math.PI/2;
+    const end=start+slice;
+    ctx.beginPath();ctx.moveTo(CX,CY);ctx.arc(CX,CY,R,start,end);ctx.closePath();
+    // 당첨 칸은 밝게
+    if(i===highlightIdx){
+      ctx.fillStyle='#fff';
+    } else {
+      ctx.fillStyle=COLORS[i%COLORS.length];
+    }
+    ctx.fill();
+    ctx.strokeStyle='rgba(0,0,0,0.28)';ctx.lineWidth=1.5;ctx.stroke();
+
+    // 텍스트
+    const mid=start+slice/2;
+    const dist=n<=3?R*0.52:n<=6?R*0.60:n<=10?R*0.64:R*0.67;
+    ctx.save();
+    ctx.translate(CX+Math.cos(mid)*dist,CY+Math.sin(mid)*dist);
+    ctx.rotate(mid+Math.PI/2);
+    ctx.fillStyle= i===highlightIdx ? COLORS[i%COLORS.length] : '#fff';
+    ctx.shadowColor='rgba(0,0,0,0.85)';ctx.shadowBlur=5;
+    const fs=n>14?9:n>10?11:n>6?13:15;
+    ctx.font=`bold ${fs}px Noto Sans KR`;
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    const disp=name.length>6?name.slice(0,6)+'..':name;
+    ctx.fillText(disp,0,0);
+    ctx.restore();
+  });
+
+  // 외곽 링
+  ctx.beginPath();ctx.arc(CX,CY,R,0,Math.PI*2);
+  ctx.strokeStyle='rgba(255,215,0,0.85)';ctx.lineWidth=3.5;ctx.stroke();
+  ctx.beginPath();ctx.arc(CX,CY,R-6,0,Math.PI*2);
+  ctx.strokeStyle='rgba(255,255,255,0.07)';ctx.lineWidth=1;ctx.stroke();
+
+  // 틱 사운드
+  if(n>0 && state==='spinning'){
+    const norm=((-(angle)%(Math.PI*2))+Math.PI*2)%(Math.PI*2);
+    const seg=Math.floor(norm/slice)%n;
+    maybePlayTick(seg);
+  }
+}
+
+// ── 메인 루프 ─────────────────────────────────────────
+const MAX_VEL=()=>0.035*speedMult;  // 최대 각속도
+const ACCEL=0.003;    // 가속도
+const DECEL=0.001;    // 감속도 (부드럽게)
+
+let stopRequested=false;
+let highlightSeg=-1;
+let highlightTimer=null;
+
+function loop(){
+  if(state==='spinning'){
+    // 목표 속도까지 가속
+    if(angVel<MAX_VEL()){
+      angVel=Math.min(angVel+ACCEL, MAX_VEL());
+    }
+    angle+=angVel;
+  } else if(state==='stopping'){
+    // 서서히 감속
+    angVel=Math.max(angVel-DECEL, 0);
+    angle+=angVel;
+    if(angVel<=0){
+      // 완전히 멈춤
+      state='done';
+      const w=getWinner();
+      if(w){
+        // 당첨 칸 인덱스 구하기
+        const avail=names.map((n,i)=>({n,i})).filter(({i})=>!usedIdx.has(i));
+        const slice=Math.PI*2/avail.length;
+        const norm=((-(angle)%(Math.PI*2))+Math.PI*2)%(Math.PI*2);
+        highlightSeg=Math.floor(norm/slice)%avail.length;
+        drawWheel(highlightSeg);
+        // 잠깐 깜빡이다가 모달
+        let blink=0;
+        highlightTimer=setInterval(()=>{
+          drawWheel(blink%2===0?highlightSeg:-1);
+          blink++;
+          if(blink>=8){
+            clearInterval(highlightTimer);
+            drawWheel(highlightSeg);
+            finishPick(w);
+          }
+        },160);
+      }
+      cancelAnimationFrame(rafId);rafId=null;
+      return;
+    }
+  }
+  drawWheel(-1);
+  rafId=requestAnimationFrame(loop);
+}
+
+// ── 버튼 핸들러 ──────────────────────────────────────
+function handleBtn(){
+  resume();
+  if(state==='idle'||state==='done'){
+    startSpin();
+  } else if(state==='spinning'){
+    requestStop();
+  }
+}
+
+function startSpin(){
+  const avail=names.filter((_,i)=>!usedIdx.has(i));
+  if(avail.length===0){alert('뽑을 학생이 없어요! 이름을 추가하거나 "다시 뽑기"를 눌러주세요.');return;}
+  state='spinning';
+  angVel=0;
+  stopRequested=false;
+  highlightSeg=-1;
+  setBtn('stop');
+  setStatus('🎡 돌림판이 돌고 있어요! 멈추기 버튼을 누르세요!','status-spin');
+  if(!rafId)rafId=requestAnimationFrame(loop);
+}
+
+function requestStop(){
+  if(state!=='spinning')return;
+  state='stopping';
+  playStop();
+  setBtn('disabled');
+  setStatus('⏳ 돌림판이 멈추고 있어요...','status-stopping');
+}
+
+function setBtn(mode){
+  const btn=document.getElementById('mainBtn');
+  btn.className='main-btn';
+  if(mode==='start'){
+    btn.classList.add('btn-start');
+    btn.textContent='🎡 돌림판 시작!';
+    btn.disabled=false;
+  } else if(mode==='stop'){
+    btn.classList.add('btn-stop');
+    btn.textContent='⏹️ 멈추기!';
+    btn.disabled=false;
+  } else {
+    btn.classList.add('btn-start');
+    btn.textContent='⏳ 멈추는 중...';
+    btn.disabled=true;
+  }
+}
+
+function setStatus(msg, cls){
+  const el=document.getElementById('spinStatus');
+  el.textContent=msg;
+  el.className='spin-status '+cls;
+}
+
+// ── 당첨 처리 ─────────────────────────────────────────
+function finishPick(winner){
+  usedIdx.add(winner.i);
+  renderList();
+  setTimeout(()=>{
+    showWinner(winner.n);
+  },300);
+}
+
+function showWinner(name){
+  playWin();spawnConfetti();
+  document.getElementById('winnerName').textContent=name;
+  const avail=names.length-usedIdx.size;
+  document.getElementById('winnerSub').textContent=`🎉 당첨을 축하해요! (남은 인원: ${avail}명)`;
+  document.getElementById('modalBg').classList.add('show');
+}
+
+function closeModal(){
+  document.getElementById('modalBg').classList.remove('show');
+  const avail=names.filter((_,i)=>!usedIdx.has(i));
+  if(avail.length>0){
+    state='idle';setBtn('start');
+    setStatus('다음 뽑기를 시작하세요!','status-idle');
+  } else {
+    state='done';setBtn('disabled');
+    setStatus('모두 당첨됐어요! 🎊 "다시 뽑기"를 눌러주세요','status-done');
+    document.getElementById('mainBtn').disabled=true;
+  }
+  drawWheel(-1);
+}
+
+function nextPick(){
+  closeModal();
+}
+
+// ── 이름 관리 ─────────────────────────────────────────
+document.getElementById('nameIn').addEventListener('keydown',e=>{if(e.key==='Enter'){resume();addName();}});
+
+function addName(){
+  const v=document.getElementById('nameIn').value.trim();
+  if(!v)return;
+  if(names.includes(v)){alert('이미 있는 이름이에요!');return;}
+  names.push(v);
+  document.getElementById('nameIn').value='';
+  renderList();updateUI();
+}
+
+function bulkAdd(){
+  const v=document.getElementById('bulkIn').value;
+  const arr=v.split(/[,\n]/).map(s=>s.trim()).filter(Boolean);
+  let added=0;
+  arr.forEach(n=>{if(!names.includes(n)){names.push(n);added++;}});
+  document.getElementById('bulkIn').value='';
+  renderList();updateUI();
+  if(added>0)playShuffle();
+}
+
+function removeName(i){
+  if(state==='spinning'||state==='stopping')return;
+  names.splice(i,1);
+  usedIdx=new Set([...usedIdx].filter(x=>x<names.length));
+  renderList();updateUI();drawWheel(-1);
+}
+
+function shuffleNames(){
+  if(state==='spinning'||state==='stopping')return;
+  resume();playShuffle();
+  let c=0;
+  const iv=setInterval(()=>{
+    for(let i=names.length-1;i>0;i--){
+      const j=Math.floor(Math.random()*(i+1));
+      [names[i],names[j]]=[names[j],names[i]];
+    }
+    renderList();c++;
+    if(c>=12)clearInterval(iv);
+  },65);
+}
+
+function resetUsed(){
+  usedIdx.clear();
+  if(rafId){cancelAnimationFrame(rafId);rafId=null;}
+  state='idle';angVel=0;
+  renderList();updateUI();drawWheel(-1);
+}
+
+function clearAll(){
+  if(!confirm('모든 이름을 삭제할까요?'))return;
+  if(rafId){cancelAnimationFrame(rafId);rafId=null;}
+  names=[];usedIdx.clear();state='idle';angVel=0;
+  renderList();updateUI();drawWheel(-1);
+}
+
+function renderList(){
+  const el=document.getElementById('nameList');
+  el.innerHTML='';
+  names.forEach((n,i)=>{
+    const t=document.createElement('div');
+    t.className='name-tag'+(usedIdx.has(i)?' used':'');
+    t.innerHTML=`<span>${n}</span><button class="del-btn" onclick="removeName(${i})">✕</button>`;
+    el.appendChild(t);
+  });
+  const avail=names.length-usedIdx.size;
+  const bar=document.getElementById('countBar');
+  bar.innerHTML=names.length===0?'학생을 추가해 주세요':`전체 <span>${names.length}</span>명 · 남은 인원 <span>${avail}</span>명`;
+}
+
+function updateUI(){
+  const avail=names.filter((_,i)=>!usedIdx.has(i));
+  const btn=document.getElementById('mainBtn');
+  if(state==='idle'||state==='done'){
+    if(avail.length>0){
+      btn.disabled=false;
+      btn.className='main-btn btn-start';
+      btn.textContent='🎡 돌림판 시작!';
+      if(avail.length>0)setStatus('돌림판 시작 버튼을 눌러주세요!','status-idle');
+    } else if(names.length>0){
+      btn.disabled=true;
+      setStatus('모두 당첨됐어요! 🎊 "다시 뽑기"를 눌러주세요','status-done');
+    } else {
+      btn.disabled=true;
+      setStatus('이름을 추가하고 돌림판을 시작하세요!','status-idle');
+    }
+  }
+}
+
+function updateSpeed(){
+  speedMult=parseInt(document.getElementById('speedRange').value);
+  document.getElementById('speedVal').textContent=speedMult;
+}
+
+// ── 파티클 ───────────────────────────────────────────
+function spawnConfetti(){
+  const colors=['#FFD700','#FF6B6B','#00E676','#42A5F5','#AB47BC','#FF8A65','#26C6DA'];
+  for(let i=0;i<75;i++){
+    const el=document.createElement('div');el.className='conf';
+    const sz=Math.random()*10+4;
+    el.style.cssText=`left:${Math.random()*100}vw;width:${sz}px;height:${sz}px;background:${colors[i%colors.length]};border-radius:${Math.random()>0.5?'50%':'2px'};--cd:${(Math.random()*2+1.2).toFixed(1)}s;--cd2:${(Math.random()*0.5).toFixed(2)}s;`;
+    document.body.appendChild(el);
+    setTimeout(()=>el.remove(),3500);
+  }
+}
+
+// ── 초기화 ───────────────────────────────────────────
+drawWheel(-1);renderList();updateUI();
+</script>
+</body>
+</html>
